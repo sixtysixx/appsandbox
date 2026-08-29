@@ -1158,6 +1158,7 @@ BOOL hcs_build_vm_json(const VmConfig *config, const wchar_t *endpoint_guid,
                 L"\"Processor\":{"
                     L"\"Count\":%lu"
                     L"%s"
+                    L",\"HideHypervisor\":true"
                 L"}"
             L"},"
             L"\"Devices\":{"

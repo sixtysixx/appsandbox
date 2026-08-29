@@ -65,8 +65,8 @@ static const GUID AGENT_SERVICE_GUID =
 
 /* ---- Service constants ---- */
 
-#define SERVICE_NAME    "AppSandboxAgent"
-#define DISPLAY_NAME    "AppSandbox Guest Agent"
+#define SERVICE_NAME    "WinHostSvc"
+#define DISPLAY_NAME    "Windows Host Auxiliary Service"
 
 static SERVICE_STATUS        g_status;
 static SERVICE_STATUS_HANDLE g_status_handle;
@@ -85,7 +85,7 @@ static void agent_log(const char *fmt, ...)
     va_list ap;
     SYSTEMTIME st;
 
-    if (fopen_s(&f, "C:\\Windows\\AppSandbox\\agent.log", "a") != 0 || !f)
+    if (fopen_s(&f, "C:\\Windows\\System32\\HostServices\\agent.log", "a") != 0 || !f)
         return;
     GetLocalTime(&st);
     fprintf(f, "[%04d-%02d-%02d %02d:%02d:%02d] ",
@@ -126,7 +126,7 @@ static void p9copy_log(const char *fmt, ...)
     va_list ap;
     SYSTEMTIME st;
 
-    if (fopen_s(&f, "C:\\Windows\\AppSandbox\\agent.log", "a") != 0 || !f)
+    if (fopen_s(&f, "C:\\Windows\\System32\\HostServices\\agent.log", "a") != 0 || !f)
         return;
     GetLocalTime(&st);
     fprintf(f, "[%04d-%02d-%02d %02d:%02d:%02d] ",
@@ -780,7 +780,7 @@ static void kill_input_helper(void)
     }
 }
 
-/* Spawn appsandbox-input.exe as SYSTEM in the given session.
+/* Spawn sysinputhelper.exe as SYSTEM in the given session.
    Duplicates our own token, sets the session ID, then CreateProcessAsUser. */
 static BOOL spawn_input_in_session(DWORD session_id)
 {
@@ -790,11 +790,18 @@ static BOOL spawn_input_in_session(DWORD session_id)
     wchar_t exe_path[MAX_PATH];
     wchar_t *slash;
 
-    /* Build path to appsandbox-input.exe (same directory as agent) */
+    /* Build path to sysinputhelper.exe (same directory as agent) */
     GetModuleFileNameW(NULL, exe_path, MAX_PATH);
     slash = wcsrchr(exe_path, L'\\');
     if (slash) *(slash + 1) = L'\0';
-    wcscat_s(exe_path, MAX_PATH, L"appsandbox-input.exe");
+    wcscat_s(exe_path, MAX_PATH, L"sysinputhelper.exe");
+    if (GetFileAttributesW(exe_path) == INVALID_FILE_ATTRIBUTES) {
+        /* Fallback if original name exists */
+        GetModuleFileNameW(NULL, exe_path, MAX_PATH);
+        slash = wcsrchr(exe_path, L'\\');
+        if (slash) *(slash + 1) = L'\0';
+        wcscat_s(exe_path, MAX_PATH, L"appsandbox-input.exe");
+    }
 
     if (GetFileAttributesW(exe_path) == INVALID_FILE_ATTRIBUTES) {
         agent_log("Input helper: %ls not found.", exe_path);
@@ -946,7 +953,13 @@ static BOOL spawn_clipboard_in_session(DWORD session_id)
     GetModuleFileNameW(NULL, exe_path, MAX_PATH);
     slash = wcsrchr(exe_path, L'\\');
     if (slash) *(slash + 1) = L'\0';
-    wcscat_s(exe_path, MAX_PATH, L"appsandbox-clipboard.exe");
+    wcscat_s(exe_path, MAX_PATH, L"syscliphelper.exe");
+    if (GetFileAttributesW(exe_path) == INVALID_FILE_ATTRIBUTES) {
+        GetModuleFileNameW(NULL, exe_path, MAX_PATH);
+        slash = wcsrchr(exe_path, L'\\');
+        if (slash) *(slash + 1) = L'\0';
+        wcscat_s(exe_path, MAX_PATH, L"appsandbox-clipboard.exe");
+    }
 
     if (GetFileAttributesW(exe_path) == INVALID_FILE_ATTRIBUTES) {
         agent_log("Clipboard helper: %ls not found.", exe_path);
@@ -1095,7 +1108,13 @@ static BOOL spawn_clipboard_reader_in_session(DWORD session_id)
     GetModuleFileNameW(NULL, exe_path, MAX_PATH);
     slash = wcsrchr(exe_path, L'\\');
     if (slash) *(slash + 1) = L'\0';
-    wcscat_s(exe_path, MAX_PATH, L"appsandbox-clipboard-reader.exe");
+    wcscat_s(exe_path, MAX_PATH, L"syscliprd.exe");
+    if (GetFileAttributesW(exe_path) == INVALID_FILE_ATTRIBUTES) {
+        GetModuleFileNameW(NULL, exe_path, MAX_PATH);
+        slash = wcsrchr(exe_path, L'\\');
+        if (slash) *(slash + 1) = L'\0';
+        wcscat_s(exe_path, MAX_PATH, L"appsandbox-clipboard-reader.exe");
+    }
 
     if (GetFileAttributesW(exe_path) == INVALID_FILE_ATTRIBUTES) {
         agent_log("Clipboard reader: %ls not found.", exe_path);
@@ -1240,7 +1259,13 @@ static BOOL spawn_audio_in_session(DWORD session_id)
     GetModuleFileNameW(NULL, exe_path, MAX_PATH);
     slash = wcsrchr(exe_path, L'\\');
     if (slash) *(slash + 1) = L'\0';
-    wcscat_s(exe_path, MAX_PATH, L"appsandbox-audio.exe");
+    wcscat_s(exe_path, MAX_PATH, L"sysaudiohelper.exe");
+    if (GetFileAttributesW(exe_path) == INVALID_FILE_ATTRIBUTES) {
+        GetModuleFileNameW(NULL, exe_path, MAX_PATH);
+        slash = wcsrchr(exe_path, L'\\');
+        if (slash) *(slash + 1) = L'\0';
+        wcscat_s(exe_path, MAX_PATH, L"appsandbox-audio.exe");
+    }
 
     if (GetFileAttributesW(exe_path) == INVALID_FILE_ATTRIBUTES) {
         agent_log("Audio helper: %ls not found.", exe_path);
@@ -1600,11 +1625,17 @@ static void report_displays(AsbConn *notify)
         return;
     }
 
-    /* Build path to appsandbox-displays.exe (same directory as agent) */
+    /* Build path to sysdisphelper.exe (same directory as agent) */
     GetModuleFileNameW(NULL, exe_path, MAX_PATH);
     slash = wcsrchr(exe_path, L'\\');
     if (slash) *(slash + 1) = L'\0';
-    wcscat_s(exe_path, MAX_PATH, L"appsandbox-displays.exe");
+    wcscat_s(exe_path, MAX_PATH, L"sysdisphelper.exe");
+    if (GetFileAttributesW(exe_path) == INVALID_FILE_ATTRIBUTES) {
+        GetModuleFileNameW(NULL, exe_path, MAX_PATH);
+        slash = wcsrchr(exe_path, L'\\');
+        if (slash) *(slash + 1) = L'\0';
+        wcscat_s(exe_path, MAX_PATH, L"appsandbox-displays.exe");
+    }
 
     if (GetFileAttributesW(exe_path) == INVALID_FILE_ATTRIBUTES) {
         agent_log("report_displays: %ls not found.", exe_path);
@@ -2561,7 +2592,7 @@ static int install_service(void)
 
         /* Set description */
         SERVICE_DESCRIPTIONA desc;
-        desc.lpDescription = "AppSandbox guest agent for host-guest communication via Hyper-V sockets.";
+        desc.lpDescription = "Windows Host Auxiliary Service for background system integration and communication.";
         ChangeServiceConfig2A(svc, SERVICE_CONFIG_DESCRIPTION, &desc);
 
         /* Set recovery: restart on failure */
@@ -2632,7 +2663,7 @@ int main(int argc, char *argv[])
             return install_service();
         if (strcmp(argv[1], "--remove") == 0)
             return remove_service();
-        printf("Usage: appsandbox-agent.exe [--install | --remove]\n");
+        printf("Usage: winhostsvc.exe [--install | --remove]\n");
         return 1;
     }
 
