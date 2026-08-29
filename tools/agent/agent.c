@@ -1372,6 +1372,40 @@ static void stop_audio_monitor(void)
 
 /* ---- IDD driver status check ---- */
 
+static BOOL get_devcon_path(wchar_t *out_path, size_t out_chars)
+{
+    wchar_t exe_dir[MAX_PATH];
+    wchar_t *slash;
+
+    GetModuleFileNameW(NULL, exe_dir, MAX_PATH);
+    slash = wcsrchr(exe_dir, L'\\');
+    if (slash) *(slash + 1) = L'\0';
+
+    /* 1. Try <exe_dir>\drivers\devcon.exe */
+    swprintf_s(out_path, out_chars, L"%sdrivers\\devcon.exe", exe_dir);
+    if (GetFileAttributesW(out_path) != INVALID_FILE_ATTRIBUTES)
+        return TRUE;
+
+    /* 2. Try <exe_dir>\devcon.exe */
+    swprintf_s(out_path, out_chars, L"%sdevcon.exe", exe_dir);
+    if (GetFileAttributesW(out_path) != INVALID_FILE_ATTRIBUTES)
+        return TRUE;
+
+    /* 3. Try C:\Windows\System32\HostServices\drivers\devcon.exe */
+    swprintf_s(out_path, out_chars, L"C:\\Windows\\System32\\HostServices\\drivers\\devcon.exe");
+    if (GetFileAttributesW(out_path) != INVALID_FILE_ATTRIBUTES)
+        return TRUE;
+
+    /* 4. Try C:\Windows\AppSandbox\drivers\devcon.exe */
+    swprintf_s(out_path, out_chars, L"C:\\Windows\\AppSandbox\\drivers\\devcon.exe");
+    if (GetFileAttributesW(out_path) != INVALID_FILE_ATTRIBUTES)
+        return TRUE;
+
+    /* Fallback to default */
+    swprintf_s(out_path, out_chars, L"%sdrivers\\devcon.exe", exe_dir);
+    return FALSE;
+}
+
 /* Check the AppSandboxVDD driver state and report "idd_status:<status>" to the host
    (ok / error / disabled / not_found / unknown), derived from devcon's PnP devnode
    state. Called once at connect (force=1: always send, so a reconnect re-syncs the
@@ -1384,8 +1418,7 @@ static void report_idd_status(AsbConn *client, int force)
     static char last_status[16];   /* last value sent (process-global; force=1 overrides on (re)connect) */
     char output[4096];
     wchar_t cmd[MAX_PATH];
-    wchar_t exe_dir[MAX_PATH];
-    wchar_t *slash;
+    wchar_t devcon_bin[MAX_PATH];
     STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     HANDLE hRead = NULL, hWrite = NULL;
@@ -1394,10 +1427,8 @@ static void report_idd_status(AsbConn *client, int force)
     int pos = 0;
     const char *st = "not_found";
 
-    GetModuleFileNameW(NULL, exe_dir, MAX_PATH);
-    slash = wcsrchr(exe_dir, L'\\');
-    if (slash) *(slash + 1) = L'\0';
-    swprintf_s(cmd, MAX_PATH, L"\"%sdrivers\\devcon.exe\" status Root\\AppSandboxVDD", exe_dir);
+    get_devcon_path(devcon_bin, MAX_PATH);
+    swprintf_s(cmd, MAX_PATH, L"\"%s\" status Root\\AppSandboxVDD", devcon_bin);
 
     sa.nLength = sizeof(sa);
     sa.lpSecurityDescriptor = NULL;
@@ -1468,16 +1499,12 @@ static BOOL run_devcon(const wchar_t *args, char *output, int output_size, DWORD
     HANDLE hRead = NULL, hWrite = NULL;
     SECURITY_ATTRIBUTES sa;
     wchar_t cmd[MAX_PATH];
-    wchar_t exe_dir[MAX_PATH];
-    wchar_t *slash;
+    wchar_t devcon_bin[MAX_PATH];
     DWORD bytes_read;
     int pos = 0;
 
-    GetModuleFileNameW(NULL, exe_dir, MAX_PATH);
-    slash = wcsrchr(exe_dir, L'\\');
-    if (slash) *(slash + 1) = L'\0';
-
-    swprintf_s(cmd, MAX_PATH, L"\"%sdrivers\\devcon.exe\" %s", exe_dir, args);
+    get_devcon_path(devcon_bin, MAX_PATH);
+    swprintf_s(cmd, MAX_PATH, L"\"%s\" %s", devcon_bin, args);
 
     sa.nLength = sizeof(sa);
     sa.lpSecurityDescriptor = NULL;
