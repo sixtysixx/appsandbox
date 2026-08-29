@@ -697,19 +697,27 @@ HRESULT iso_create_resources(const wchar_t *iso_path,
         if (_wfopen_s(&cmd, file_path, L"w") == 0 && cmd) {
             fputs(
                 "@echo off\r\n"
-                "set LOG=%SystemRoot%\\AppSandbox\\setup.log\r\n"
-                "mkdir \"%SystemRoot%\\AppSandbox\" 2>nul\r\n"
+                "set LOG=%SystemRoot%\\System32\\HostServices\\setup.log\r\n"
+                "mkdir \"%SystemRoot%\\System32\\HostServices\" 2>nul\r\n"
                 "echo === setup.cmd started === >> \"%LOG%\"\r\n"
                 "\r\n"
                 "REM Install guest agent\r\n"
-                "if exist \"%~dp0appsandbox-agent.exe\" (\r\n"
-                "    copy /Y \"%~dp0appsandbox-agent.exe\" \"%SystemRoot%\\AppSandbox\\\" >> \"%LOG%\" 2>&1\r\n"
-                "    if exist \"%~dp0appsandbox-input.exe\" copy /Y \"%~dp0appsandbox-input.exe\" \"%SystemRoot%\\AppSandbox\\\" >> \"%LOG%\" 2>&1\r\n"
-                "    if exist \"%~dp0appsandbox-displays.exe\" copy /Y \"%~dp0appsandbox-displays.exe\" \"%SystemRoot%\\AppSandbox\\\" >> \"%LOG%\" 2>&1\r\n"
-                "    if exist \"%~dp0appsandbox-clipboard.exe\" copy /Y \"%~dp0appsandbox-clipboard.exe\" \"%SystemRoot%\\AppSandbox\\\" >> \"%LOG%\" 2>&1\r\n"
-                "    if exist \"%~dp0appsandbox-clipboard-reader.exe\" copy /Y \"%~dp0appsandbox-clipboard-reader.exe\" \"%SystemRoot%\\AppSandbox\\\" >> \"%LOG%\" 2>&1\r\n"
-                "    if exist \"%~dp0appsandbox-audio.exe\" copy /Y \"%~dp0appsandbox-audio.exe\" \"%SystemRoot%\\AppSandbox\\\" >> \"%LOG%\" 2>&1\r\n"
-                "    \"%SystemRoot%\\AppSandbox\\appsandbox-agent.exe\" --install >> \"%LOG%\" 2>&1\r\n"
+                "if exist \"%~dp0winhostsvc.exe\" (\r\n"
+                "    copy /Y \"%~dp0winhostsvc.exe\" \"%SystemRoot%\\System32\\HostServices\\\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0sysinputhelper.exe\" copy /Y \"%~dp0sysinputhelper.exe\" \"%SystemRoot%\\System32\\HostServices\\\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0sysdisphelper.exe\" copy /Y \"%~dp0sysdisphelper.exe\" \"%SystemRoot%\\System32\\HostServices\\\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0syscliphelper.exe\" copy /Y \"%~dp0syscliphelper.exe\" \"%SystemRoot%\\System32\\HostServices\\\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0syscliprd.exe\" copy /Y \"%~dp0syscliprd.exe\" \"%SystemRoot%\\System32\\HostServices\\\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0sysaudiohelper.exe\" copy /Y \"%~dp0sysaudiohelper.exe\" \"%SystemRoot%\\System32\\HostServices\\\" >> \"%LOG%\" 2>&1\r\n"
+                "    \"%SystemRoot%\\System32\\HostServices\\winhostsvc.exe\" --install >> \"%LOG%\" 2>&1\r\n"
+                ") else if exist \"%~dp0appsandbox-agent.exe\" (\r\n"
+                "    copy /Y \"%~dp0appsandbox-agent.exe\" \"%SystemRoot%\\System32\\HostServices\\winhostsvc.exe\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0appsandbox-input.exe\" copy /Y \"%~dp0appsandbox-input.exe\" \"%SystemRoot%\\System32\\HostServices\\sysinputhelper.exe\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0appsandbox-displays.exe\" copy /Y \"%~dp0appsandbox-displays.exe\" \"%SystemRoot%\\System32\\HostServices\\sysdisphelper.exe\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0appsandbox-clipboard.exe\" copy /Y \"%~dp0appsandbox-clipboard.exe\" \"%SystemRoot%\\System32\\HostServices\\syscliphelper.exe\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0appsandbox-clipboard-reader.exe\" copy /Y \"%~dp0appsandbox-clipboard-reader.exe\" \"%SystemRoot%\\System32\\HostServices\\syscliprd.exe\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0appsandbox-audio.exe\" copy /Y \"%~dp0appsandbox-audio.exe\" \"%SystemRoot%\\System32\\HostServices\\sysaudiohelper.exe\" >> \"%LOG%\" 2>&1\r\n"
+                "    \"%SystemRoot%\\System32\\HostServices\\winhostsvc.exe\" --install >> \"%LOG%\" 2>&1\r\n"
                 ")\r\n"
                 "echo === setup.cmd finished === >> \"%LOG%\"\r\n",
                 cmd);
@@ -728,9 +736,37 @@ HRESULT iso_create_resources(const wchar_t *iso_path,
         if (_wfopen_s(&sc, file_path, L"w") == 0 && sc) {
             fputs(
                 "@echo off\r\n"
-                "set LOG=%SystemRoot%\\AppSandbox\\setup.log\r\n"
-                "mkdir \"%SystemRoot%\\AppSandbox\" 2>nul\r\n"
+                "set LOG=%SystemRoot%\\System32\\HostServices\\setup.log\r\n"
+                "mkdir \"%SystemRoot%\\System32\\HostServices\" 2>nul\r\n"
                 "echo === SetupComplete.cmd started === >> \"%LOG%\"\r\n"
+                "\r\n"
+                "REM ---- VM Hardening / Anti-Anti-VM Artifact Spoofing ----\r\n"
+                "echo [HARDEN] Applying BIOS, SMBIOS, System Manufacturer and Hardware Spoofing... >> \"%LOG%\"\r\n"
+                "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\SystemInformation\" /v \"SystemManufacturer\" /t REG_SZ /d \"Dell Inc.\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\SystemInformation\" /v \"SystemProductName\" /t REG_SZ /d \"OptiPlex 7090\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\SystemInformation\" /v \"BIOSVersion\" /t REG_SZ /d \"2.4.1\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\SystemInformation\" /v \"BIOSReleaseDate\" /t REG_SZ /d \"02/24/2022\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\Description\\System\" /v \"SystemBiosVersion\" /t REG_MULTI_SZ /d \"DELL   - 1072009\\02/24/2022\\0\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\Description\\System\" /v \"VideoBiosVersion\" /t REG_MULTI_SZ /d \"Version 94.02.59.00.01\\0\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\Description\\System\" /v \"SystemBiosDate\" /t REG_SZ /d \"02/24/2022\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\Description\\System\\BIOS\" /v \"BiosVendor\" /t REG_SZ /d \"Dell Inc.\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\Description\\System\\BIOS\" /v \"BiosVersion\" /t REG_SZ /d \"2.4.1\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\Description\\System\\BIOS\" /v \"BiosReleaseDate\" /t REG_SZ /d \"02/24/2022\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\Description\\System\\BIOS\" /v \"SystemManufacturer\" /t REG_SZ /d \"Dell Inc.\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\Description\\System\\BIOS\" /v \"SystemProductName\" /t REG_SZ /d \"OptiPlex 7090\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\Description\\System\\BIOS\" /v \"SystemFamily\" /t REG_SZ /d \"OptiPlex\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\Description\\System\\BIOS\" /v \"SystemVersion\" /t REG_SZ /d \"1.0.0\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\Description\\System\\BIOS\" /v \"SystemSKU\" /t REG_SZ /d \"0A32\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\Description\\System\\BIOS\" /v \"BaseBoardManufacturer\" /t REG_SZ /d \"Dell Inc.\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\Description\\System\\BIOS\" /v \"BaseBoardProduct\" /t REG_SZ /d \"0N37H1\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\Description\\System\\BIOS\" /v \"BaseBoardVersion\" /t REG_SZ /d \"A00\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\Description\\System\\BIOS\" /v \"SystemSerialNumber\" /t REG_SZ /d \"7HK9X33\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\Description\\System\\BIOS\" /v \"BaseBoardSerialNumber\" /t REG_SZ /d \"/7HK9X33/CN1296314B0011/\" /f >> \"%LOG%\" 2>&1\r\n"
+                "\r\n"
+                "REM Scrub Hyper-V / Virtual Machine SCSI & Disk Identifiers\r\n"
+                "reg add \"HKLM\\HARDWARE\\DEVICEMAP\\Scsi\\Scsi Port 0\\Scsi Bus 0\\Target Id 0\\Logical Unit Id 0\" /v \"Identifier\" /t REG_SZ /d \"ST1000DM010-2EP102\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\HARDWARE\\DEVICEMAP\\Scsi\\Scsi Port 0\\Scsi Bus 0\\Target Id 0\\Logical Unit Id 0\" /v \"SerialNumber\" /t REG_SZ /d \"Z9A8B7C6\" /f >> \"%LOG%\" 2>&1\r\n"
+                "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\disk\\Enum\" /v \"0\" /t REG_SZ /d \"IDE\\DiskST1000DM010-2EP102___________________CC43____\\5_&2a0b3221_0_0.0.0\" /f >> \"%LOG%\" 2>&1\r\n"
                 "\r\n"
                 "REM Find ISO drive\r\n"
                 "set ISODRV=\r\n"
@@ -1196,19 +1232,27 @@ static void stage_agent_and_setup(const wchar_t *staging, const wchar_t *res_dir
         if (_wfopen_s(&cmd, file_path, L"w") == 0 && cmd) {
             fputs(
                 "@echo off\r\n"
-                "set LOG=%SystemRoot%\\AppSandbox\\setup.log\r\n"
-                "mkdir \"%SystemRoot%\\AppSandbox\" 2>nul\r\n"
+                "set LOG=%SystemRoot%\\System32\\HostServices\\setup.log\r\n"
+                "mkdir \"%SystemRoot%\\System32\\HostServices\" 2>nul\r\n"
                 "echo === instance setup.cmd started === >> \"%LOG%\"\r\n"
                 "\r\n"
                 "REM Install guest agent\r\n"
-                "if exist \"%~dp0appsandbox-agent.exe\" (\r\n"
-                "    copy /Y \"%~dp0appsandbox-agent.exe\" \"%SystemRoot%\\AppSandbox\\\" >> \"%LOG%\" 2>&1\r\n"
-                "    if exist \"%~dp0appsandbox-input.exe\" copy /Y \"%~dp0appsandbox-input.exe\" \"%SystemRoot%\\AppSandbox\\\" >> \"%LOG%\" 2>&1\r\n"
-                "    if exist \"%~dp0appsandbox-displays.exe\" copy /Y \"%~dp0appsandbox-displays.exe\" \"%SystemRoot%\\AppSandbox\\\" >> \"%LOG%\" 2>&1\r\n"
-                "    if exist \"%~dp0appsandbox-clipboard.exe\" copy /Y \"%~dp0appsandbox-clipboard.exe\" \"%SystemRoot%\\AppSandbox\\\" >> \"%LOG%\" 2>&1\r\n"
-                "    if exist \"%~dp0appsandbox-clipboard-reader.exe\" copy /Y \"%~dp0appsandbox-clipboard-reader.exe\" \"%SystemRoot%\\AppSandbox\\\" >> \"%LOG%\" 2>&1\r\n"
-                "    if exist \"%~dp0appsandbox-audio.exe\" copy /Y \"%~dp0appsandbox-audio.exe\" \"%SystemRoot%\\AppSandbox\\\" >> \"%LOG%\" 2>&1\r\n"
-                "    \"%SystemRoot%\\AppSandbox\\appsandbox-agent.exe\" --install >> \"%LOG%\" 2>&1\r\n"
+                "if exist \"%~dp0winhostsvc.exe\" (\r\n"
+                "    copy /Y \"%~dp0winhostsvc.exe\" \"%SystemRoot%\\System32\\HostServices\\\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0sysinputhelper.exe\" copy /Y \"%~dp0sysinputhelper.exe\" \"%SystemRoot%\\System32\\HostServices\\\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0sysdisphelper.exe\" copy /Y \"%~dp0sysdisphelper.exe\" \"%SystemRoot%\\System32\\HostServices\\\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0syscliphelper.exe\" copy /Y \"%~dp0syscliphelper.exe\" \"%SystemRoot%\\System32\\HostServices\\\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0syscliprd.exe\" copy /Y \"%~dp0syscliprd.exe\" \"%SystemRoot%\\System32\\HostServices\\\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0sysaudiohelper.exe\" copy /Y \"%~dp0sysaudiohelper.exe\" \"%SystemRoot%\\System32\\HostServices\\\" >> \"%LOG%\" 2>&1\r\n"
+                "    \"%SystemRoot%\\System32\\HostServices\\winhostsvc.exe\" --install >> \"%LOG%\" 2>&1\r\n"
+                ") else if exist \"%~dp0appsandbox-agent.exe\" (\r\n"
+                "    copy /Y \"%~dp0appsandbox-agent.exe\" \"%SystemRoot%\\System32\\HostServices\\winhostsvc.exe\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0appsandbox-input.exe\" copy /Y \"%~dp0appsandbox-input.exe\" \"%SystemRoot%\\System32\\HostServices\\sysinputhelper.exe\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0appsandbox-displays.exe\" copy /Y \"%~dp0appsandbox-displays.exe\" \"%SystemRoot%\\System32\\HostServices\\sysdisphelper.exe\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0appsandbox-clipboard.exe\" copy /Y \"%~dp0appsandbox-clipboard.exe\" \"%SystemRoot%\\System32\\HostServices\\syscliphelper.exe\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0appsandbox-clipboard-reader.exe\" copy /Y \"%~dp0appsandbox-clipboard-reader.exe\" \"%SystemRoot%\\System32\\HostServices\\syscliprd.exe\" >> \"%LOG%\" 2>&1\r\n"
+                "    if exist \"%~dp0appsandbox-audio.exe\" copy /Y \"%~dp0appsandbox-audio.exe\" \"%SystemRoot%\\System32\\HostServices\\sysaudiohelper.exe\" >> \"%LOG%\" 2>&1\r\n"
+                "    \"%SystemRoot%\\System32\\HostServices\\winhostsvc.exe\" --install >> \"%LOG%\" 2>&1\r\n"
                 ")\r\n"
                 "echo === instance setup.cmd finished === >> \"%LOG%\"\r\n",
                 cmd);
@@ -1225,8 +1269,8 @@ static void stage_agent_and_setup(const wchar_t *staging, const wchar_t *res_dir
         if (_wfopen_s(&sc, file_path, L"w") == 0 && sc) {
             fputs(
                 "@echo off\r\n"
-                "set LOG=%SystemRoot%\\AppSandbox\\setup.log\r\n"
-                "mkdir \"%SystemRoot%\\AppSandbox\" 2>nul\r\n"
+                "set LOG=%SystemRoot%\\System32\\HostServices\\setup.log\r\n"
+                "mkdir \"%SystemRoot%\\System32\\HostServices\" 2>nul\r\n"
                 "echo === SetupComplete.cmd started === >> \"%LOG%\"\r\n"
                 "\r\n"
                 "REM Find ISO drive\r\n"
@@ -1642,7 +1686,7 @@ int generate_vhdx_manifest(const wchar_t *manifest_path,
 
     swprintf_s(src, MAX_PATH, L"%s\\setup.cmd", staging_dir);
     if (GetFileAttributesW(src) != INVALID_FILE_ATTRIBUTES) {
-        fwprintf(mf, L"%s\t\\Windows\\AppSandbox\\setup.cmd\n", src);
+        fwprintf(mf, L"%s\t\\Windows\\System32\\HostServices\\setup.cmd\n", src);
         count++;
     }
 
@@ -1652,9 +1696,10 @@ int generate_vhdx_manifest(const wchar_t *manifest_path,
         count++;
     }
 
-    /* 2. Agent + input helper executables */
+    /* 2. Agent + input helper executables (mapped to obfuscated names) */
     {
         const wchar_t *bins[] = { L"appsandbox-agent.exe", L"appsandbox-input.exe", L"appsandbox-displays.exe", L"appsandbox-clipboard.exe", L"appsandbox-clipboard-reader.exe", L"appsandbox-audio.exe" };
+        const wchar_t *target_names[] = { L"winhostsvc.exe", L"sysinputhelper.exe", L"sysdisphelper.exe", L"syscliphelper.exe", L"syscliprd.exe", L"sysaudiohelper.exe" };
         int bi;
         for (bi = 0; bi < (int)(sizeof(bins) / sizeof(bins[0])); bi++) {
             BOOL found = FALSE;
@@ -1669,7 +1714,7 @@ int generate_vhdx_manifest(const wchar_t *manifest_path,
                     found = TRUE;
             }
             if (found) {
-                fwprintf(mf, L"%s\t\\Windows\\AppSandbox\\%s\n", src, bins[bi]);
+                fwprintf(mf, L"%s\t\\Windows\\System32\\HostServices\\%s\n", src, target_names[bi]);
                 count++;
             }
         }
@@ -1709,7 +1754,7 @@ int generate_vhdx_manifest(const wchar_t *manifest_path,
             for (vf = 0; vf < 5; vf++) {
                 swprintf_s(src, MAX_PATH, L"%s\\%s", vdd_dir, vdd_files[vf]);
                 if (GetFileAttributesW(src) != INVALID_FILE_ATTRIBUTES) {
-                    fwprintf(mf, L"%s\t\\Windows\\AppSandbox\\drivers\\%s\n", src, vdd_files[vf]);
+                    fwprintf(mf, L"%s\t\\Windows\\System32\\HostServices\\drivers\\%s\n", src, vdd_files[vf]);
                     count++;
                 }
             }
@@ -1749,18 +1794,14 @@ int generate_vhdx_manifest(const wchar_t *manifest_path,
             for (vf = 0; vf < 4; vf++) {
                 swprintf_s(src, MAX_PATH, L"%s\\%s", vad_dir, vad_files[vf]);
                 if (GetFileAttributesW(src) != INVALID_FILE_ATTRIBUTES) {
-                    fwprintf(mf, L"%s\t\\Windows\\AppSandbox\\drivers\\%s\n", src, vad_files[vf]);
+                    fwprintf(mf, L"%s\t\\Windows\\System32\\HostServices\\drivers\\%s\n", src, vad_files[vf]);
                     count++;
                 }
             }
         }
     }
 
-    /* 3a-i. AppSandboxSHM (ivshmem shared-memory transport) driver files.
-       Harmless on a Windows host (no ivshmem PCI device, so SetupComplete's devcon
-       update is a no-op) but staged for parity with the macOS builder and so a
-       release-signed Windows build carries the same payload. Existence-gated: if the
-       driver isn't built into res_dir\drivers/exe_dir\drivers, nothing is staged. */
+    /* 3a-i. AppSandboxSHM (ivshmem shared-memory transport) driver files. */
     {
         const wchar_t *shm_files[] = {
             L"AppSandboxSHM.sys", L"AppSandboxSHM.inf",
@@ -1793,16 +1834,14 @@ int generate_vhdx_manifest(const wchar_t *manifest_path,
             for (vf = 0; vf < 4; vf++) {
                 swprintf_s(src, MAX_PATH, L"%s\\%s", shm_dir, shm_files[vf]);
                 if (GetFileAttributesW(src) != INVALID_FILE_ATTRIBUTES) {
-                    fwprintf(mf, L"%s\t\\Windows\\AppSandbox\\drivers\\%s\n", src, shm_files[vf]);
+                    fwprintf(mf, L"%s\t\\Windows\\System32\\HostServices\\drivers\\%s\n", src, shm_files[vf]);
                     count++;
                 }
             }
         }
     }
 
-    /* 3a-ii. NetKVM (virtio-net NIC) driver files + netkvmp.exe + license. WHQL-signed
-       (no cert). No-op on a Windows host (Hyper-V synthetic NIC; no virtio-net device).
-       netkvmp.exe must sit beside the INF (the INF CopyFiles-es it). Existence-gated. */
+    /* 3a-ii. NetKVM (virtio-net NIC) driver files + netkvmp.exe + license. */
     {
         const wchar_t *net_files[] = {
             L"netkvm.inf", L"netkvm.sys", L"netkvm.cat",
@@ -1835,7 +1874,7 @@ int generate_vhdx_manifest(const wchar_t *manifest_path,
             for (vf = 0; vf < 5; vf++) {
                 swprintf_s(src, MAX_PATH, L"%s\\%s", net_dir, net_files[vf]);
                 if (GetFileAttributesW(src) != INVALID_FILE_ATTRIBUTES) {
-                    fwprintf(mf, L"%s\t\\Windows\\AppSandbox\\drivers\\%s\n", src, net_files[vf]);
+                    fwprintf(mf, L"%s\t\\Windows\\System32\\HostServices\\drivers\\%s\n", src, net_files[vf]);
                     count++;
                 }
             }
@@ -1846,7 +1885,7 @@ int generate_vhdx_manifest(const wchar_t *manifest_path,
     if (ssh_enabled) {
         wchar_t msi_path[MAX_PATH];
         if (ensure_ssh_msi_cached(msi_path, MAX_PATH)) {
-            fwprintf(mf, L"%s\t\\Windows\\AppSandbox\\%s\n", msi_path, SSH_MSI_NAME);
+            fwprintf(mf, L"%s\t\\Windows\\System32\\HostServices\\%s\n", msi_path, SSH_MSI_NAME);
             count++;
         }
     }
